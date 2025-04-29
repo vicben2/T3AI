@@ -1,0 +1,62 @@
+#mainCont {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.flex {
+    display: flex;
+    justify-content: center;
+}
+
+.grid {
+    width: 75px;
+    height: 75px;
+    font-size: 5em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+}
+
+#resetButton {
+    visibility: hidden;
+}
+
+#g0 {
+    border-right: 2px solid black;
+    border-bottom: 2px solid black;
+}
+
+#g1 {
+    border-right: 2px solid black;
+    border-bottom: 2px solid black;
+}
+
+#g2 {
+    border-bottom: 2px solid black;
+}
+
+#g3 {
+    border-right: 2px solid black;
+    border-bottom: 2px solid black;
+}
+
+#g4 {
+    border-right: 2px solid black;
+    border-bottom: 2px solid black;
+}
+
+#g5 {
+    border-bottom: 2px solid black;
+}
+
+#g6 {
+    border-right: 2px solid black;
+}
+
+#g7 {
+    border-right: 2px solid black;
+}
