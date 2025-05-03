@@ -3,6 +3,30 @@ const grids = document.querySelectorAll(".grid")
 
 grids.forEach(grid => {
     grid.addEventListener("click", (e) => selectGrid(e, null))
+    grid.addEventListener("mouseenter", function(e) {
+        const cGrid = e.target.id
+        const elem = document.getElementById(cGrid)
+        if(elem.innerText !== "") {
+            return
+        }
+        
+        if(firstPlay) {
+            elem.innerText = "O"
+        }
+        else {
+            elem.innerText = "X"
+        }
+
+        elem.classList.add("gridHov")
+    })
+    grid.addEventListener("mouseleave", function(e) {
+        const cGrid = e.target.id
+        const elem = document.getElementById(cGrid)
+        if(elem.classList.contains("gridHov")) {
+            elem.innerText = ""
+            elem.classList.remove("gridHov")
+        }
+    })
 })
 
 
@@ -24,7 +48,7 @@ function selectGrid(e, grid) {
 
 function updateBoard(grid) {
     const elem = document.getElementById(grid)
-    if(elem.innerText !== "") {
+    if(elem.innerText !== "" && elem.classList.contains("gridHov") === false) {
         return
     }
 
@@ -37,6 +61,7 @@ function updateBoard(grid) {
     firstPlay = !firstPlay
     gridsUsed += 1
 
+    elem.classList.remove("gridHov")
     checkForWin()
     
     if(gridsUsed === 9) {

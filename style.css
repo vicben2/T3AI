@@ -21,6 +21,10 @@
     user-select: none;
 }
 
+.gridHov {
+    color: gray;
+}
+
 #resetButton {
     visibility: hidden;
 }
