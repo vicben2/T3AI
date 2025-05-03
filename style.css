@@ -25,6 +25,10 @@
     color: gray;
 }
 
+.gridWin {
+    color: limegreen;
+}
+
 #resetButton {
     visibility: hidden;
 }
