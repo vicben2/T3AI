@@ -74,7 +74,7 @@ function updateBoard(grid) {
 
     elem.classList.remove("gridHov")
     if(gridsUsed >= 5) {
-        gameOver = checkForWin()
+        gameOver = checkForWin(gridNum)
     }
     
     if(gridsUsed === 9 || gameOver) {
@@ -85,14 +85,14 @@ function updateBoard(grid) {
 
 
 const oWinStatesRegex = [
-    /OOO....../,
-    /...OOO.../,
-    /......OOO/,
-    /O..O..O../,
-    /.O..O..O./,
-    /..O..O..O/,
-    /O...O...O/,
-    /..O.O.O../
+    /OOO....../, //0
+    /...OOO.../, //1
+    /......OOO/, //2
+    /O..O..O../, //3
+    /.O..O..O./, //4
+    /..O..O..O/, //5
+    /O...O...O/, //6
+    /..O.O.O../ //7
 ]
 const xWinStatesRegex = [
     /XXX....../,
@@ -104,12 +104,28 @@ const xWinStatesRegex = [
     /X...X...X/,
     /..X.X.X../
 ]
-function checkForWin() {
+function checkForWin(gridNum) {
     let output = false
+    let toLoop
+
+    switch(parseInt(gridNum)) {
+        case 0: toLoop = [0,3,6]; break
+        case 1: toLoop = [0,4]; break
+        case 2: toLoop = [0,5,7]; break
+        case 3: toLoop = [1,3]; break
+        case 4: toLoop = [1,4,6,7]; break
+        case 5: toLoop = [1,5]; break
+        case 6: toLoop = [2,3,7]; break
+        case 7: toLoop = [2,4]; break
+        case 8: toLoop = [2,5,6]; break
+        default: console.error("Something went wrong: gridnum")
+    }
+
     if(firstPlay) {
-        xWinStatesRegex.forEach((regex, index) => {
+        toLoop.forEach((num) => {
+            const regex = xWinStatesRegex[num]
             if(regex.test(gridStr)) {
-                switch(index) {
+                switch(num) {
                     case 0: colorWinCells([0,1,2]); break
                     case 1: colorWinCells([3,4,5]); break
                     case 2: colorWinCells([6,7,8]); break
@@ -121,15 +137,14 @@ function checkForWin() {
                     default: console.error("Something went wrong.")
                 }
                 output = true
-                console.log(regex)
-                console.log(gridStr)
             }
         });
     }
     else {
-        oWinStatesRegex.forEach((regex, index) => {
+        toLoop.forEach((num) => {
+            const regex = oWinStatesRegex[num]
             if(regex.test(gridStr)) {
-                switch(index) {
+                switch(num) {
                     case 0: colorWinCells([0,1,2]); break
                     case 1: colorWinCells([3,4,5]); break
                     case 2: colorWinCells([6,7,8]); break
@@ -141,8 +156,6 @@ function checkForWin() {
                     default: console.error("Something went wrong.")
                 }
                 output = true
-                console.log(regex)
-                console.log(gridStr)
             }
         });
     }
