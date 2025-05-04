@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TicTacToe</title>
     <link rel="stylesheet" href="./style.css">
-    <script src="./index.js" defer></script>
+    <script type="module" src="./script.js" defer></script>
+    <script type="module" src="./ai.js" defer></script>
 </head>
 
 <body>
@@ -28,6 +29,26 @@
             </div>
         </div>
         <button id="resetButton">Reset</button>
+    </div>
+    <div id="sidePanel">
+        <div id="playerSelection">
+            <div id="playerSelectionDropdown">
+                <label for="players">Players:</label>
+                <select id="players" name="players">
+                    <option value="playerVsAi">Player vs AI</option>
+                    <option value="aiVsPlayer">AI vs Player</option>
+                    <option value="aiVsAi">AI vs AI (Train)</option>
+                </select>
+            </div>
+            <div id="trainingOptions">
+                Iteration: <input id="trainIterationInput" type="text" value="10">
+                <button id="trainingStartBtn">Start</button>
+            </div>
+        </div>
+        <div id="aiLogPanel">
+            <span>AI data log:</span>
+            <div id="aiLog"></div>
+        </div>
     </div>
 </body>
 

@@ -1,6 +1,7 @@
+import { playersElem } from "./ai.js"
+
+
 const grids = document.querySelectorAll(".grid")
-
-
 grids.forEach(grid => {
     grid.addEventListener("click", (e) => selectGrid(e, null))
     grid.addEventListener("mouseenter", function(e) {
@@ -35,19 +36,42 @@ let gridsUsed = 0
 let gameOver = false
 
 
-function selectGrid(e, grid) {
+export function selectGrid(e, grid) {
     if(grid === null) {
         //player selection
+        if(gameOver) {
+            return
+        }
+        const elem = document.getElementById(e.srcElement.id)
+        if(elem.innerText !== "" && elem.classList.contains("gridHov") === false) {
+            return
+        }
+
         updateBoard(e.srcElement.id)
+        const event = new CustomEvent("playerSelectedGrid", {
+            detail: {
+                gameState: gameState,
+                youAre: firstPlay ? "O" : "X"
+            }
+        })
+        window.dispatchEvent(event)
     }
     else {
         //ai selection
         updateBoard("g" + grid)
+        const event = new CustomEvent("aiSelectedGrid", {
+            detail: {
+                gameState: gameState,
+                youAre: firstPlay ? "O" : "X"
+            }
+        })
+        window.dispatchEvent(event)
     }
 }
 
 
 let gridStr = "---------"
+let gameState = []
 function updateBoard(grid) {
     if(gameOver) {
         return
@@ -59,6 +83,7 @@ function updateBoard(grid) {
     }
 
     const gridNum = grid.match(/\d/)[0]
+    gameState.push(parseInt(gridNum))
     const regex = new RegExp(`(?<=.{${gridNum}}).`)
 
     if(firstPlay) {
@@ -78,6 +103,14 @@ function updateBoard(grid) {
     }
     
     if(gridsUsed === 9 || gameOver) {
+        const event = new CustomEvent("gameOver", {
+            detail: {
+                gameOverType: gameOver ? "win" : "draw",
+                winner: gameOver === false ? "none" : firstPlay ? "X" : "O",
+                gameState: gameState
+            }
+        })
+        window.dispatchEvent(event)
         gameOver = true
         showReset()
     }
@@ -176,18 +209,22 @@ resetButton.addEventListener("click", resetBoard)
 
 
 function showReset() {
+    playersElem.selectedIndex = 0
     resetButton.style.visibility = "visible"
 }
 
 
-function resetBoard() {
+const aiLogElem = document.getElementById("aiLog")
+export function resetBoard() {
     gridsUsed = 0
     firstPlay = true
     gameOver = false
     gridStr = "---------"
+    gameState = []
     grids.forEach(grid => {
         grid.innerText = ""
         grid.classList.remove("gridHov", "gridWin")
     })
     resetButton.style.visibility = "hidden"
+    aiLogElem.innerHTML = ""
 }
