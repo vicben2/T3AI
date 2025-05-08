@@ -24,11 +24,6 @@ document.getElementById("avp").addEventListener("click", function () {
     const rand = random(0, cells.length - 1)
     selectGrid(null, cells[rand])
 })
-document.getElementById("ava").addEventListener("click", function () {
-    resetBoard()
-    trainingOptionsElem.style.visibility = "visible"
-    blocked = false
-})
 document.getElementById("pvp").addEventListener("click", function () {
     resetBoard()
     blocked = true
@@ -47,6 +42,8 @@ function aiSelectGrid(e) {
     if (blocked) {
         return
     }
+
+    //get all available moves
     let cells = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     const gameState = e.detail.gameState.map(num => num).join('')
     cells = cells.filter((cell) => {
@@ -54,6 +51,7 @@ function aiSelectGrid(e) {
     })
     let origCells = [...cells]
 
+    //get records
     const records = e.detail.youAre === "O" ? playerOrecord : playerXrecord || {}
     let rand
     let toSelect = null
@@ -71,12 +69,10 @@ function aiSelectGrid(e) {
         return
     }
 
-    //randomize
+    //if no winning move found, randomize move while avoiding a losing losing move
     rand = random(0, cells.length - 1)
     toSelect = cells[rand]
     cells = cells.filter(num => num !== toSelect)
-
-    //avoid losing move
     while (hasKey(records, gameState + toSelect) && records[gameState + toSelect] === -1) {
         const prevSelect = gameState + toSelect
         rand = random(0, cells.length - 1)
@@ -172,14 +168,12 @@ function recordGame(gameState, winner, winningGrids, shouldMutate) {
         [0, 3, 6, 1, 4, 7, 2, 5, 8]
     ]
 
-    //add original
+    //add translations
     let translatedStates = []
     translatedStates.push({
         state: gameState,
         wg: winningGrids
     })
-
-    //add translations: rotation and flip
     translations.forEach(translationArr => {
         let newEquivalent = []
         let newWgEquivalent = []
@@ -199,7 +193,8 @@ function recordGame(gameState, winner, winningGrids, shouldMutate) {
         })
     })
 
-    //add mutations
+
+    //add permutations
     if (shouldMutate && winningGrids.length < 2) {
         //initialize
         let toMutate = []
@@ -245,7 +240,6 @@ function recordGame(gameState, winner, winningGrids, shouldMutate) {
         let winRecords = []
         let loseRecords = []
 
-        //generate torecords
         toMutate.forEach(a => {
             a.playerO.forEach((pOArr) => {
                 a.playerX.forEach((pXArr) => {
