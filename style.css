@@ -29,10 +29,6 @@
     color: limegreen;
 }
 
-#resetButton {
-    visibility: hidden;
-}
-
 #g0 {
     border-right: 2px solid black;
     border-bottom: 2px solid black;
@@ -67,4 +63,35 @@
 
 #g7 {
     border-right: 2px solid black;
+}
+
+#sidePanel {
+    width: 500px;
+    height: 80vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+}
+
+#playerSelection {
+    border-bottom: 2px solid black;
+    padding-bottom: 5px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+#aiLogPanel {
+    height: 100%;
+}
+
+#trainingOptions {
+    visibility: hidden;
+}
+
+#trainIterationInput {
+    width: 30%;
 }
