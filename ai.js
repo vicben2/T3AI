@@ -1,52 +1,67 @@
 import { selectGrid, resetBoard } from "./script.js"
 
 
-export const playersElem = document.getElementById("players")
 const trainingOptionsElem = document.getElementById("trainingOptions")
 const trainingStartBtnElem = document.getElementById("trainingStartBtn")
 const aiLogElem = document.getElementById("aiLog")
 
 
-window.addEventListener("load", function () {
-    playersElem.selectedIndex = 0
-})
-
-
-playersElem.addEventListener("change", function (e) {
+let blocked = false
+document.getElementById("pva").addEventListener("click", function () {
     resetBoard()
-    const selected = e.target.value
-    if (selected === "aiVsAi") {
-        trainingOptionsElem.style.visibility = "visible"
-    }
-    else if (selected === "aiVsPlayer") {
-        const cells = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-        const rand = random(0, cells.length - 1)
-        selectGrid(null, cells[rand])
-    }
-    else {
-        trainingOptionsElem.style.visibility = "hidden"
-    }
+    blocked = false
+    trainingOptionsElem.style.visibility = "hidden"
+    aiLogElem.innerHTML += `<li>Records O: ${Object.keys(playerOrecord).length}</li>`
+    aiLogElem.innerHTML += `<li>Records X: ${Object.keys(playerXrecord).length}</li>`
+})
+document.getElementById("avp").addEventListener("click", function () {
+    resetBoard()
+    aiLogElem.innerHTML += `<li>Records O: ${Object.keys(playerOrecord).length}</li>`
+    aiLogElem.innerHTML += `<li>Records X: ${Object.keys(playerXrecord).length}</li>`
+    trainingOptionsElem.style.visibility = "hidden"
+    blocked = false
+    const cells = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    const rand = random(0, cells.length - 1)
+    selectGrid(null, cells[rand])
+})
+document.getElementById("ava").addEventListener("click", function () {
+    resetBoard()
+    trainingOptionsElem.style.visibility = "visible"
+    blocked = false
+})
+document.getElementById("pvp").addEventListener("click", function () {
+    resetBoard()
+    blocked = true
+    trainingOptionsElem.style.visibility = "hidden"
 })
 
 
 window.addEventListener("playerSelectedGrid", aiSelectGrid)
 
 
+let playerXrecord = JSON.parse(localStorage.getItem("playerX")) || {}
+let playerOrecord = JSON.parse(localStorage.getItem("playerO")) || {}
+
+
 function aiSelectGrid(e) {
+    if (blocked) {
+        return
+    }
     let cells = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     const gameState = e.detail.gameState.map(num => num).join('')
     const currentPlayer = "player" + e.detail.youAre
     cells = cells.filter((cell) => {
         return gameState.includes(cell) === false
     })
+    let origCells = [...cells]
 
-    const records = JSON.parse(localStorage.getItem(currentPlayer)) || {}
+    const records = e.detail.youAre === "O" ? playerOrecord : playerXrecord || {}
     let rand
     let toSelect
 
     //select winning move
     cells.forEach(num => {
-        if(hasKey(records, gameState + num) && records[gameState + toSelect] === 1) {
+        if (hasKey(records, gameState + num) && records[gameState + num] === 1) {
             toSelect = num
             aiLogElem.innerHTML += `<li>Found winning move: ${gameState + toSelect}</li>`
             selectGrid(null, toSelect)
@@ -60,11 +75,23 @@ function aiSelectGrid(e) {
     cells = cells.filter(num => num !== toSelect)
 
     //avoid losing move
-    while(hasKey(records, gameState + toSelect) && records[gameState + toSelect] === -1) {
+    while (hasKey(records, gameState + toSelect) && records[gameState + toSelect] === -1) {
         const prevSelect = gameState + toSelect
         rand = random(0, cells.length - 1)
         toSelect = cells[rand]
         cells = cells.filter(num => num !== toSelect)
+        
+        //edge case where ai runs out of moves to avoid
+        if(cells.length <= 0) {
+            recordGame(Array.from(gameState, Number),
+                e.detail.youAre === "O" ? "X" : "O",
+                [[parseInt(gameState.charAt(gameState.length - 1))]]
+            )
+            rand = random(0, cells.length - 1)
+            toSelect = origCells[rand]
+            aiLogElem.innerHTML += `<li>Deadend found: ${gameState}.</li>`
+            break
+        }
         aiLogElem.innerHTML += `<li>Avoided: ${prevSelect}. New: ${gameState + toSelect}</li>`
     }
     selectGrid(null, toSelect)
@@ -85,46 +112,20 @@ function random(min, max) {
 
 window.addEventListener("gameOver", function (e) {
     const game = e.detail
-    let playerO = JSON.parse(localStorage.getItem("playerO")) || {}
-    let playerX = JSON.parse(localStorage.getItem("playerX")) || {}
-
-    const allEquivalentStates = getEquivalentStates(game.gameState, 1)
-    const allEquivalentStatesUnc = getEquivalentStates(game.gameState, 0)
-
-    if (game.winner === "O") {
-        for (let i = 0; i < allEquivalentStates.length; i++) {
-            playerX[allEquivalentStates[i]] = -1
-            playerO[allEquivalentStatesUnc[i]] = 1
-        }
-    }
-    else if (game.winner === "X") {
-        for (let i = 0; i < allEquivalentStates.length; i++) {
-            playerO[allEquivalentStates[i]] = -1
-            playerX[allEquivalentStatesUnc[i]] = 1
-        }
-    }
-    else {
-        for (let i = 0; i < allEquivalentStates.length; i++) {
-            playerO[allEquivalentStates[i]] = 0
-        }
-        for (let i = 0; i < allEquivalentStates.length; i++) {
-            playerX[allEquivalentStates[i]] = 0
-        }
+    if (game.winner === "none") {
+        return
     }
 
-    localStorage.setItem("playerO", JSON.stringify(playerO))
-    localStorage.setItem("playerX", JSON.stringify(playerX))
+    recordGame(game.gameState, game.winner, game.winningGrids)
 
-    allEquivalentStates.forEach(state => {
-        aiLogElem.innerHTML += `<li>Recorded state: ${state} - ${game.gameOverType}</li>`
-    })
-
-    if(trainingMode) {
+    if (trainingMode) {
         resetBoard()
 
         iteration -= 1
-        if(iteration <= -1) {
+        if (iteration <= -1) {
             trainingMode = false
+            localStorage.setItem("playerO", JSON.stringify(playerOrecord))
+            localStorage.setItem("playerX", JSON.stringify(playerXrecord))
             return
         }
 
@@ -150,14 +151,18 @@ trainingStartBtnElem.addEventListener("click", function () {
 
 
 window.addEventListener("aiSelectedGrid", function (e) {
-    if(trainingMode === false) {
+    if (trainingMode === false) {
         return
     }
     aiSelectGrid(e)
 })
 
 
-function getEquivalentStates(gameState, cut) {
+function recordGame(gameState, winner, winningGrids) {
+    if(gameState.length <= 4) {
+        return
+    }
+
     const translations = [
         [6, 3, 0, 7, 4, 1, 8, 5, 2],
         [8, 7, 6, 5, 4, 3, 2, 1, 0],
@@ -168,24 +173,164 @@ function getEquivalentStates(gameState, cut) {
         [0, 3, 6, 1, 4, 7, 2, 5, 8]
     ]
 
+    //add original
     let equivalentStates = []
-    equivalentStates.push(gameState.map((num, index) => {
-        if (index < gameState.length - cut) {
-            return num
-        }
-    }).join(''))
+    let translatedStates = []
+    translatedStates.push({
+        state: gameState,
+        wg: winningGrids
+    })
 
+    //add translations: rotation and flip
     translations.forEach(translationArr => {
         let newEquivalent = []
+        let newWgEquivalent = []
         gameState.forEach(num => {
             newEquivalent.push(translationArr.indexOf(num))
         })
-        equivalentStates.push(newEquivalent.map((num, index) => {
-            if (index < gameState.length - cut) {
-                return num
-            }
-        }).join(''))
+        winningGrids.forEach(wg => {
+            let equiv = []
+            wg.forEach(num => {
+                equiv.push(translationArr.indexOf(num))
+            })
+            newWgEquivalent.push(equiv)
+        });
+        translatedStates.push({
+            state: newEquivalent,
+            wg: newWgEquivalent
+        })
     })
 
-    return equivalentStates
+    //add mutations
+    if (winningGrids.length < 2) {
+        //initialize
+        let toMutate = []
+        translatedStates.forEach(s => {
+            let iEven = []
+            let iOdd = []
+            const wg = s.wg[0]
+            const state = s.state
+
+            state.forEach((num, index) => {
+                if (index % 2 === 0) {
+                    if (wg == null || wg.includes(num) === false) {
+                        iEven.push(num)
+                    }
+                }
+                else {
+                    if (wg == null || wg.includes(num) === false) {
+                        iOdd.push(num)
+                    }
+                }
+            });
+            wg.forEach(g => {
+                let pO = [...iEven]
+                if (winner === "O") {
+                    pO = [...pO, ...wg]
+                }
+                pO = pO.filter(num => num !== g)
+
+                let pX = [...iOdd]
+                if (winner === "X") {
+                    pX = [...pX, ...wg]
+                }
+                pX = pX.filter(num => num !== g)
+
+                toMutate.push({
+                    playerO: permute(pO),
+                    playerX: permute(pX),
+                    last: g
+                })
+            })
+        });
+
+        let winRecords = []
+        let loseRecords = []
+
+        //generate torecords
+        toMutate.forEach(a => {
+            a.playerO.forEach((pOArr) => {
+                a.playerX.forEach((pXArr) => {
+                    let winEquiv = []
+                    let loseEquiv = []
+                    pOArr.forEach((numO, i) => {
+                        if (winner === "O") {
+                            if (i === pOArr.length - 1) {
+                                winEquiv.push(numO)
+                                loseEquiv.push(numO)
+                                winEquiv.push(pXArr[i])
+                                loseEquiv.push(pXArr[i])
+                                winEquiv.push(a.last)
+                            }
+                            else {
+                                winEquiv.push(numO)
+                                loseEquiv.push(numO)
+                                winEquiv.push(pXArr[i])
+                                loseEquiv.push(pXArr[i])
+                            }
+                        }
+                        else if (winner === "X") {
+                            if (i === pOArr.length - 1) {
+                                winEquiv.push(numO)
+                                loseEquiv.push(numO)
+                                winEquiv.push(a.last)
+                            }
+                            else {
+                                winEquiv.push(numO)
+                                loseEquiv.push(numO)
+                                winEquiv.push(pXArr[i])
+                                loseEquiv.push(pXArr[i])
+                            }
+                        }
+                    })
+                    winRecords.push(winEquiv)
+                    loseRecords.push(loseEquiv)
+                })
+
+            })
+        })
+
+        if (winner === "O") {
+            winRecords.forEach(record => {
+                playerOrecord[record.map(num => num).join('')] = 1
+            })
+            loseRecords.forEach(record => {
+                playerXrecord[record.map(num => num).join('')] = -1
+            })
+        }
+        else {
+            winRecords.forEach(record => {
+                playerXrecord[record.map(num => num).join('')] = 1
+            })
+            loseRecords.forEach(record => {
+                playerOrecord[record.map(num => num).join('')] = -1
+            })
+        }
+    }
+
+    if (trainingMode === false) {
+        localStorage.setItem("playerO", JSON.stringify(playerOrecord))
+        localStorage.setItem("playerX", JSON.stringify(playerXrecord))
+
+        aiLogElem.innerHTML += `<li>New total records O: ${Object.keys(playerOrecord).length}</li>`
+        aiLogElem.innerHTML += `<li>New total records X: ${Object.keys(playerXrecord).length}</li>`
+    }
+}
+
+
+function permute(nums) {
+    const result = [];
+    function backtrack(start) {
+        if (start === nums.length) {
+            result.push(nums.slice());
+            return;
+        }
+        for (let i = start; i < nums.length; i++) {
+            [nums[start], nums[i]] = [nums[i], nums[start]];
+            backtrack(start + 1);
+            [nums[start], nums[i]] = [nums[i], nums[start]];
+        }
+    }
+    backtrack(0);
+    return result;
 }

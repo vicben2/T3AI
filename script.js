@@ -1,6 +1,3 @@
-import { playersElem } from "./ai.js"
-
-
 const grids = document.querySelectorAll(".grid")
 grids.forEach(grid => {
     grid.addEventListener("click", (e) => selectGrid(e, null))
@@ -39,7 +36,7 @@ let gameOver = false
 export function selectGrid(e, grid) {
     if(grid === null) {
         //player selection
-        if(gameOver) {
+        if(gameOver || window.getComputedStyle(resetButton).visibility === "visible") {
             return
         }
         const elem = document.getElementById(e.srcElement.id)
@@ -97,17 +94,19 @@ function updateBoard(grid) {
     firstPlay = !firstPlay
     gridsUsed += 1
 
+    let win
     elem.classList.remove("gridHov")
     if(gridsUsed >= 5) {
-        gameOver = checkForWin(gridNum)
+        win = checkForWin(gridNum)
+        gameOver = win.isOver
     }
     
     if(gridsUsed === 9 || gameOver) {
         const event = new CustomEvent("gameOver", {
             detail: {
-                gameOverType: gameOver ? "win" : "draw",
                 winner: gameOver === false ? "none" : firstPlay ? "X" : "O",
-                gameState: gameState
+                gameState: gameState,
+                winningGrids: win.winningGrids
             }
         })
         window.dispatchEvent(event)
@@ -138,7 +137,7 @@ const xWinStatesRegex = [
     /..X.X.X../
 ]
 function checkForWin(gridNum) {
-    let output = false
+    let output = { isOver: false, winningGrids: [] }
     let toLoop
 
     switch(parseInt(gridNum)) {
@@ -159,17 +158,17 @@ function checkForWin(gridNum) {
             const regex = xWinStatesRegex[num]
             if(regex.test(gridStr)) {
                 switch(num) {
-                    case 0: colorWinCells([0,1,2]); break
-                    case 1: colorWinCells([3,4,5]); break
-                    case 2: colorWinCells([6,7,8]); break
-                    case 3: colorWinCells([0,3,6]); break
-                    case 4: colorWinCells([1,4,7]); break
-                    case 5: colorWinCells([2,5,8]); break
-                    case 6: colorWinCells([0,4,8]); break
-                    case 7: colorWinCells([2,4,6]); break
+                    case 0: output.winningGrids.push([0,1,2]); colorWinCells([0,1,2]); break
+                    case 1: output.winningGrids.push([3,4,5]); colorWinCells([3,4,5]); break
+                    case 2: output.winningGrids.push([6,7,8]); colorWinCells([6,7,8]); break
+                    case 3: output.winningGrids.push([0,3,6]); colorWinCells([0,3,6]); break
+                    case 4: output.winningGrids.push([1,4,7]); colorWinCells([1,4,7]); break
+                    case 5: output.winningGrids.push([2,5,8]); colorWinCells([2,5,8]); break
+                    case 6: output.winningGrids.push([0,4,8]); colorWinCells([0,4,8]); break
+                    case 7: output.winningGrids.push([2,4,6]); colorWinCells([2,4,6]); break
                     default: console.error("Something went wrong.")
                 }
-                output = true
+                output.isOver = true
             }
         });
     }
@@ -178,17 +177,17 @@ function checkForWin(gridNum) {
             const regex = oWinStatesRegex[num]
             if(regex.test(gridStr)) {
                 switch(num) {
-                    case 0: colorWinCells([0,1,2]); break
-                    case 1: colorWinCells([3,4,5]); break
-                    case 2: colorWinCells([6,7,8]); break
-                    case 3: colorWinCells([0,3,6]); break
-                    case 4: colorWinCells([1,4,7]); break
-                    case 5: colorWinCells([2,5,8]); break
-                    case 6: colorWinCells([0,4,8]); break
-                    case 7: colorWinCells([2,4,6]); break
+                    case 0: output.winningGrids.push([0,1,2]); colorWinCells([0,1,2]); break
+                    case 1: output.winningGrids.push([3,4,5]); colorWinCells([3,4,5]); break
+                    case 2: output.winningGrids.push([6,7,8]); colorWinCells([6,7,8]); break
+                    case 3: output.winningGrids.push([0,3,6]); colorWinCells([0,3,6]); break
+                    case 4: output.winningGrids.push([1,4,7]); colorWinCells([1,4,7]); break
+                    case 5: output.winningGrids.push([2,5,8]); colorWinCells([2,5,8]); break
+                    case 6: output.winningGrids.push([0,4,8]); colorWinCells([0,4,8]); break
+                    case 7: output.winningGrids.push([2,4,6]); colorWinCells([2,4,6]); break
                     default: console.error("Something went wrong.")
                 }
-                output = true
+                output.isOver = true
             }
         });
     }
@@ -204,12 +203,7 @@ function colorWinCells(arr) {
 }
 
 
-const resetButton = document.getElementById("resetButton")
-resetButton.addEventListener("click", resetBoard)
-
-
 function showReset() {
-    playersElem.selectedIndex = 0
     resetButton.style.visibility = "visible"
 }
 
@@ -225,6 +219,6 @@ export function resetBoard() {
         grid.innerText = ""
         grid.classList.remove("gridHov", "gridWin")
     })
-    resetButton.style.visibility = "hidden"
     aiLogElem.innerHTML = ""
+    resetButton.style.visibility = "hidden"
 }

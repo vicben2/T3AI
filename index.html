@@ -28,22 +28,17 @@
                 <div id="g8" class="grid"></div>
             </div>
         </div>
-        <button id="resetButton">Reset</button>
+        <div id="resetButton">
+            <button id="pva">Player vs AI</button>
+            <button id="avp">AI vs Player</button>
+            <button id="ava">AI vs AI (Train)</button>
+            <button id="pvp">Player vs Player</button>
+        </div>
     </div>
     <div id="sidePanel">
-        <div id="playerSelection">
-            <div id="playerSelectionDropdown">
-                <label for="players">Players:</label>
-                <select id="players" name="players">
-                    <option value="playerVsAi">Player vs AI</option>
-                    <option value="aiVsPlayer">AI vs Player</option>
-                    <option value="aiVsAi">AI vs AI (Train)</option>
-                </select>
-            </div>
-            <div id="trainingOptions">
-                Iteration: <input id="trainIterationInput" type="text" value="10">
-                <button id="trainingStartBtn">Start</button>
-            </div>
+        <div id="trainingOptions">
+            Iteration: <input id="trainIterationInput" type="text" value="10">
+            <button id="trainingStartBtn">Start</button>
         </div>
         <div id="aiLogPanel">
             <span>AI data log:</span>
