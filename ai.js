@@ -49,7 +49,6 @@ function aiSelectGrid(e) {
     }
     let cells = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     const gameState = e.detail.gameState.map(num => num).join('')
-    const currentPlayer = "player" + e.detail.youAre
     cells = cells.filter((cell) => {
         return gameState.includes(cell) === false
     })
@@ -57,7 +56,7 @@ function aiSelectGrid(e) {
 
     const records = e.detail.youAre === "O" ? playerOrecord : playerXrecord || {}
     let rand
-    let toSelect
+    let toSelect = null
 
     //select winning move
     cells.forEach(num => {
@@ -65,9 +64,12 @@ function aiSelectGrid(e) {
             toSelect = num
             aiLogElem.innerHTML += `<li>Found winning move: ${gameState + toSelect}</li>`
             selectGrid(null, toSelect)
-            return
         }
     })
+
+    if(toSelect != null) {
+        return
+    }
 
     //randomize
     rand = random(0, cells.length - 1)
@@ -83,13 +85,10 @@ function aiSelectGrid(e) {
         
         //edge case where ai runs out of moves to avoid
         if(cells.length <= 0) {
-            recordGame(Array.from(gameState, Number),
-                e.detail.youAre === "O" ? "X" : "O",
-                [[parseInt(gameState.charAt(gameState.length - 1))]]
-            )
-            rand = random(0, cells.length - 1)
+            const currentGameState = Array.from(gameState, Number)
+            recordGame(currentGameState, e.detail.youAre === "O" ? "X" : "O", [[currentGameState[currentGameState.length - 1]]], false)
+            rand = random(0, origCells.length - 1)
             toSelect = origCells[rand]
-            aiLogElem.innerHTML += `<li>Deadend found: ${gameState}.</li>`
             break
         }
         aiLogElem.innerHTML += `<li>Avoided: ${prevSelect}. New: ${gameState + toSelect}</li>`
@@ -116,7 +115,7 @@ window.addEventListener("gameOver", function (e) {
         return
     }
 
-    recordGame(game.gameState, game.winner, game.winningGrids)
+    recordGame(game.gameState, game.winner, game.winningGrids, true)
 
     if (trainingMode) {
         resetBoard()
@@ -158,8 +157,8 @@ window.addEventListener("aiSelectedGrid", function (e) {
 })
 
 
-function recordGame(gameState, winner, winningGrids) {
-    if(gameState.length <= 4) {
+function recordGame(gameState, winner, winningGrids, shouldMutate) {
+    if(gameState <= 2) {
         return
     }
 
@@ -174,7 +173,6 @@ function recordGame(gameState, winner, winningGrids) {
     ]
 
     //add original
-    let equivalentStates = []
     let translatedStates = []
     translatedStates.push({
         state: gameState,
@@ -202,7 +200,7 @@ function recordGame(gameState, winner, winningGrids) {
     })
 
     //add mutations
-    if (winningGrids.length < 2) {
+    if (shouldMutate && winningGrids.length < 2) {
         //initialize
         let toMutate = []
         translatedStates.forEach(s => {
@@ -295,7 +293,10 @@ function recordGame(gameState, winner, winningGrids) {
                 playerOrecord[record.map(num => num).join('')] = 1
             })
             loseRecords.forEach(record => {
-                playerXrecord[record.map(num => num).join('')] = -1
+                const str = record.map(num => num).join('')
+                if(hasKey(playerOrecord, str) === false) {
+                    playerXrecord[record.map(num => num).join('')] = -1
+                }
             })
         }
         else {
@@ -303,7 +304,26 @@ function recordGame(gameState, winner, winningGrids) {
                 playerXrecord[record.map(num => num).join('')] = 1
             })
             loseRecords.forEach(record => {
-                playerOrecord[record.map(num => num).join('')] = -1
+                const str = record.map(num => num).join('')
+                if(hasKey(playerOrecord, str) === false) {
+                    playerOrecord[record.map(num => num).join('')] = -1
+                }
+            })
+        }
+    }
+    else {
+        if (winner === "O") {
+            translatedStates.forEach(a => {
+                playerOrecord[a.state.map(num => num).join('')] = 1
+                a.state.pop()
+                playerXrecord[a.state.map(num => num).join('')] = -1
+            })
+        }
+        else if(winner === "X") {
+            translatedStates.forEach(a => {
+                playerXrecord[a.state.map(num => num).join('')] = 1
+                a.state.pop()
+                playerOrecord[a.state.map(num => num).join('')] = -1
             })
         }
     }
