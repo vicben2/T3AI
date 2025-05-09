@@ -6,10 +6,10 @@ const trainingStartBtnElem = document.getElementById("trainingStartBtn")
 const aiLogElem = document.getElementById("aiLog")
 
 
-let blocked = false
+let noAI = false
 document.getElementById("pva").addEventListener("click", function () {
     resetBoard()
-    blocked = false
+    noAI = false
     trainingOptionsElem.style.visibility = "hidden"
     aiLogElem.innerHTML += `<li>Records O: ${Object.keys(playerOrecord).length}</li>`
     aiLogElem.innerHTML += `<li>Records X: ${Object.keys(playerXrecord).length}</li>`
@@ -19,14 +19,14 @@ document.getElementById("avp").addEventListener("click", function () {
     aiLogElem.innerHTML += `<li>Records O: ${Object.keys(playerOrecord).length}</li>`
     aiLogElem.innerHTML += `<li>Records X: ${Object.keys(playerXrecord).length}</li>`
     trainingOptionsElem.style.visibility = "hidden"
-    blocked = false
+    noAI = false
     const cells = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     const rand = random(0, cells.length - 1)
     selectGrid(null, cells[rand])
 })
 document.getElementById("pvp").addEventListener("click", function () {
     resetBoard()
-    blocked = true
+    noAI = true
     trainingOptionsElem.style.visibility = "hidden"
 })
 
@@ -39,7 +39,7 @@ let playerOrecord = JSON.parse(localStorage.getItem("playerO")) || {}
 
 
 function aiSelectGrid(e) {
-    if (blocked) {
+    if (noAI) {
         return
     }
 
@@ -57,16 +57,14 @@ function aiSelectGrid(e) {
     let toSelect = null
 
     //select winning move
-    cells.forEach(num => {
+    for (let i = 0; i < cells.length; i++) {
+        const num = cells[i]
         if (hasKey(records, gameState + num) && records[gameState + num] === 1) {
             toSelect = num
             aiLogElem.innerHTML += `<li>Found winning move: ${gameState + toSelect}</li>`
             selectGrid(null, toSelect)
+            return
         }
-    })
-
-    if(toSelect != null) {
-        return
     }
 
     //if no winning move found, randomize move while avoiding a losing losing move
@@ -78,13 +76,14 @@ function aiSelectGrid(e) {
         rand = random(0, cells.length - 1)
         toSelect = cells[rand]
         cells = cells.filter(num => num !== toSelect)
-        
+
         //edge case where ai runs out of moves to avoid
-        if(cells.length <= 0) {
+        if (cells.length <= 0) {
             const currentGameState = Array.from(gameState, Number)
-            recordGame(currentGameState, e.detail.youAre === "O" ? "X" : "O", [[currentGameState[currentGameState.length - 1]]], false)
+            recordGame(currentGameState, e.detail.youAre === "O" ? "X" : "O", [[currentGameState[currentGameState.length - 1]]], true, true)
             rand = random(0, origCells.length - 1)
             toSelect = origCells[rand]
+            aiLogElem.innerHTML += `<li>Deadend: ${gameState}. New: ${gameState + toSelect}</li>`
             break
         }
         aiLogElem.innerHTML += `<li>Avoided: ${prevSelect}. New: ${gameState + toSelect}</li>`
@@ -107,11 +106,17 @@ function random(min, max) {
 
 window.addEventListener("gameOver", function (e) {
     const game = e.detail
-    if (game.winner === "none") {
-        return
-    }
+    //if (game.winner === "none") {
+    //    return
+    //}
+    noAI = true
 
-    recordGame(game.gameState, game.winner, game.winningGrids, true)
+    if (game.winningGrids.length > 1 || game.winner === "none") {
+        recordGame(game.gameState, game.winner, game.winningGrids, false, false)
+    }
+    else {
+        recordGame(game.gameState, game.winner, game.winningGrids, true, false)
+    }
 
     if (trainingMode) {
         resetBoard()
@@ -145,16 +150,8 @@ trainingStartBtnElem.addEventListener("click", function () {
 })
 
 
-window.addEventListener("aiSelectedGrid", function (e) {
-    if (trainingMode === false) {
-        return
-    }
-    aiSelectGrid(e)
-})
-
-
-function recordGame(gameState, winner, winningGrids, shouldMutate) {
-    if(gameState <= 2) {
+function recordGame(gameState, winner, winningGrids, shouldMutate, deadEnd) {
+    if (gameState <= 1) {
         return
     }
 
@@ -193,15 +190,14 @@ function recordGame(gameState, winner, winningGrids, shouldMutate) {
         })
     })
 
-
     //add permutations
-    if (shouldMutate && winningGrids.length < 2) {
+    if (shouldMutate) {
         //initialize
         let toMutate = []
         translatedStates.forEach(s => {
             let iEven = []
             let iOdd = []
-            const wg = s.wg[0]
+            const wg = s.wg[0] || []
             const state = s.state
 
             state.forEach((num, index) => {
@@ -215,7 +211,7 @@ function recordGame(gameState, winner, winningGrids, shouldMutate) {
                         iOdd.push(num)
                     }
                 }
-            });
+            })
             wg.forEach(g => {
                 let pO = [...iEven]
                 if (winner === "O") {
@@ -274,9 +270,22 @@ function recordGame(gameState, winner, winningGrids, shouldMutate) {
                                 loseEquiv.push(pXArr[i])
                             }
                         }
+                        else {
+                            if (i === pOArr.length - 1) {
+                                winEquiv.push(numO)
+                                winEquiv.push(pXArr[i])
+                                winEquiv.push(a.last)
+                            }
+                            else {
+                                winEquiv.push(numO)
+                                winEquiv.push(pXArr[i])
+                            }
+                        }
                     })
                     winRecords.push(winEquiv)
-                    loseRecords.push(loseEquiv)
+                    if (loseEquiv.length > 0) {
+                        loseRecords.push(loseEquiv)
+                    }
                 })
 
             })
@@ -288,19 +297,19 @@ function recordGame(gameState, winner, winningGrids, shouldMutate) {
             })
             loseRecords.forEach(record => {
                 const str = record.map(num => num).join('')
-                if(hasKey(playerOrecord, str) === false) {
-                    playerXrecord[record.map(num => num).join('')] = -1
+                if (deadEnd === false || (deadEnd && hasKey(playerXrecord, str) === false)) {
+                    playerXrecord[str] = -1
                 }
             })
         }
-        else {
+        else if (winner === "X") {
             winRecords.forEach(record => {
                 playerXrecord[record.map(num => num).join('')] = 1
             })
             loseRecords.forEach(record => {
                 const str = record.map(num => num).join('')
-                if(hasKey(playerOrecord, str) === false) {
-                    playerOrecord[record.map(num => num).join('')] = -1
+                if (deadEnd === false || (deadEnd && hasKey(playerOrecord, str) === false)) {
+                    playerOrecord[str] = -1
                 }
             })
         }
@@ -313,11 +322,28 @@ function recordGame(gameState, winner, winningGrids, shouldMutate) {
                 playerXrecord[a.state.map(num => num).join('')] = -1
             })
         }
-        else if(winner === "X") {
+        else if (winner === "X") {
             translatedStates.forEach(a => {
                 playerXrecord[a.state.map(num => num).join('')] = 1
                 a.state.pop()
                 playerOrecord[a.state.map(num => num).join('')] = -1
+            })
+        }
+        else {
+            //draw
+            //provide escape route
+            translatedStates.forEach(a => {
+                let record = a.state
+                while (record.length > 1) {
+                    const str = record.map(num => num).join('')
+                    if (record.length % 2 === 0) {
+                        playerXrecord[str] = 0
+                    }
+                    else {
+                        playerOrecord[str] = 0
+                    }
+                    record.pop()
+                }
             })
         }
     }

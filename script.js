@@ -56,13 +56,6 @@ export function selectGrid(e, grid) {
     else {
         //ai selection
         updateBoard("g" + grid)
-        const event = new CustomEvent("aiSelectedGrid", {
-            detail: {
-                gameState: gameState,
-                youAre: firstPlay ? "O" : "X"
-            }
-        })
-        window.dispatchEvent(event)
     }
 }
 
@@ -190,6 +183,9 @@ function checkForWin(gridNum) {
                 output.isOver = true
             }
         });
+    }
+    if(output.winningGrids.length === 0) {
+        output.winningGrids.push([parseInt(gridNum)])
     }
     return output
 }
